@@ -12,18 +12,24 @@ from src import config
 popup_timer_thread = None  # the thread that runs the timer in the popup
 
 
+# scale an image to cover the whole screen
+def scale_image(img, width, height):
+	img_ratio = img.width / img.height
+	screen_ratio = width / height
+	if img_ratio > screen_ratio:
+		new_height = height
+		new_width = int(new_height * img_ratio)
+	else:
+		new_width = width
+		new_height = int(new_width / img_ratio)
+	img = img.resize((new_width, new_height))
+	return img
+
+
 def add_main_window(monitor):
 	config.root = tk.Tk()
 	config.root.title("water time")
 	config.root.geometry(f"{monitor.width}x{monitor.height}+{monitor.x}+{monitor.y}")
-
-	# configure grid so everything is laid out nicely in the window
-	config.root.grid_columnconfigure(0, weight=1)  # fill entire window
-	config.root.grid_rowconfigure(0, weight=2)  # title
-	config.root.grid_rowconfigure(1, weight=1)  # subtitle
-	config.root.grid_rowconfigure(2, weight=2)  # image
-	config.root.grid_rowconfigure(3, weight=1)  # timer
-	config.root.grid_rowconfigure(4, weight=2)  # button
 
 	# onclick for the close button. after the timer's up
 	def close_window():
@@ -41,35 +47,37 @@ def add_main_window(monitor):
 
 	####### V now add the actual content... V #######
 
-	# bg color
-	config.root.configure(bg=BG)
+	canvas = tk.Canvas(config.root, highlightthickness=0)
+	canvas.place(relwidth=1, relheight=1)
+
+	def grid(row):
+		return (monitor.width // 2, row * monitor.height // 10)
+
+	# bg image
+	bg_img = Image.open("./images/waterbg2.jpg")
+	bg_img = scale_image(bg_img, monitor.width, monitor.height)  # scale the image to cover the entire screen...
+	bg_image = ImageTk.PhotoImage(bg_img)
+	canvas.create_image((0, 0), image=bg_image, anchor="nw")
+	canvas.bg_image = bg_image  # keep a reference so it doesn't get garbage collected
 
 	# title text
-	title = tk.Label(config.root, text=random.choice(TITLES), font=("Arial", 70), fg=TEXT, bg=BG)
-	config.root.after(100, lambda: title.config(wraplength=config.root.winfo_width() - 100))
-	title.grid(row=0, column=0, sticky="nsew")
+	canvas.create_text(grid(1), text=random.choice(TITLES), fill=TEXT, font=("Arial", 52))
 
 	# subtitle text
-	subtitle = tk.Label(config.root, text=random.choice(SUBTITLES), font=("Arial", 40), fg=TEXT, bg=BG)
-	config.root.after(100, lambda: subtitle.config(wraplength=config.root.winfo_width() - 100))
-	subtitle.grid(row=1, column=0, sticky="nsew")
+	canvas.create_text(grid(2), text=random.choice(SUBTITLES), fill=TEXT, font=("Arial", 26))
 
-	# image
+	# cat image
 	file = "./images/cats/" + str(random.randint(1, NUM_CAT_IMAGES)) + ".png"  # pick a random image
 	img = Image.open(file)
-	img = img.resize((int(img.size[0] * 300 / img.size[1]), 300))  # force height to 300
+	img = img.resize((int(img.size[0] * 500 / img.size[1]), 500))  # force height
 	image = ImageTk.PhotoImage(img)
-	image_label = tk.Label(config.root, image=image, bg=BG)
-	image_label.grid(row=2, column=0, sticky="nsew")
-	image_label.image = image
-
-	# timer text
-	timer_label = tk.Label(config.root, text="", font=("Arial", 16), fg=FINEPRINT, bg=BG)
-	timer_label.grid(row=3, column=0, sticky="sew")
+	canvas.create_image(grid(3), image=image, anchor="n")
+	canvas.cat_image = image  # keep a reference so it doesn't get garbage collected
 
 	# button to close the thing. it starts out disabled
-	close_button = tk.Button(config.root, text="i sipped", font=("Arial", 30), width=10, height=1, bg=PRIMARY_DARK, fg=PRIMARY_TEXT_DARK, state="disabled", bd=0, relief="flat", command=close_window)
-	close_button.grid(row=4, column=0, sticky="")
+	close_button = tk.Button(config.root, text="", font=("Arial", 24), width=10, height=1, bg=PRIMARY_DARK, fg=PRIMARY_TEXT_DARK, state="disabled", bd=0, relief="flat", command=close_window)
+	button_pos = grid(9)
+	close_button.place(x=button_pos[0], y=button_pos[1], anchor="n")
 
 	def enable_button():
 		# change color to blue
@@ -85,11 +93,11 @@ def add_main_window(monitor):
 		try:
 			timer_duration = config.button_timer
 			while timer_duration > 0 and not config.stop_event.is_set():
-				config.root.after(0, lambda: timer_label.config(text="can close in " + str(timer_duration)  + " seconds"))
+				config.root.after(0, lambda: close_button.config(text=str(timer_duration)  + " seconds"))
 				time.sleep(1)
 				timer_duration -= 1
 			if not config.stop_event.is_set():
-				config.root.after(0, lambda: timer_label.config(text=""))
+				config.root.after(0, lambda: close_button.config(text="i sipped"))
 				config.root.after(0, enable_button)
 		except RuntimeError:
 			print("window closed")
@@ -113,19 +121,7 @@ def add_secondary_window(monitor):
 	# bg image
 	file = "./images/bg/" + str(random.randint(1, NUM_BG_IMAGES)) + ".jpg"  # pick a random image
 	img = Image.open(file)
-
-	# scale the image to cover the entire screen...
-	img_ratio = img.width / img.height
-	screen_ratio = monitor.width / monitor.height
-	if img_ratio > screen_ratio:
-		new_height = monitor.height
-		new_width = int(new_height * img_ratio)
-	else:
-		new_width = monitor.width
-		new_height = int(new_width / img_ratio)
-	img = img.resize((new_width, new_height))
-
-	# now attach to background label
+	img = scale_image(img, monitor.width, monitor.height)  # scale the image to cover the entire screen...
 	image = ImageTk.PhotoImage(img)
 	image_label = tk.Label(window, image=image, bg=BG)
 	image_label.place(relwidth=1, relheight=1)  # make it fill the window
