@@ -1,4 +1,5 @@
 NUM_CAT_IMAGES = 5
+NUM_BG_IMAGES = 5
 
 TITLES = ["it's water time", "take a sip of water", "hydration break", "hydration station", "mandatory water break",
 		  "thirst check"]

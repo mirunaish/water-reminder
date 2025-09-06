@@ -68,10 +68,11 @@ def on_quit(icon, _):
 
 
 def menu_items():
-	time_remaining_item = item("time until next popup: " + get_time_until_popup(), lambda: None)
+	time_remaining_item = item("time until next popup: " + get_time_until_popup(), None)
 	delay_items = [item("show every 15 minutes", lambda: set_popup_timer(15*60)), item("show every 30 minutes", lambda: set_popup_timer(30*60)), item("show every hour", lambda: set_popup_timer(60*60))]
 	pause_items = [item("pause for 1h", lambda: pause(3600)), item("pause for 2h", lambda: pause(3600*2)), item("pause for 3h", lambda: pause(3600*3))]
-	return (time_remaining_item, *delay_items, *pause_items, item("quit", on_quit))
+	s = Menu.SEPARATOR
+	return (time_remaining_item, s, *delay_items, s, *pause_items, s, item("quit", on_quit))
 
 def tray_icon():
 	config.icon = Icon("water", load_icon(), "water time", menu=Menu(menu_items))

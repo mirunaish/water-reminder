@@ -1,7 +1,9 @@
 import random
 import threading
 import time
+from screeninfo import get_monitors
 import tkinter as tk
+
 from PIL import Image, ImageTk
 from src.consts import *
 from src import config
@@ -10,9 +12,10 @@ from src import config
 popup_timer_thread = None  # the thread that runs the timer in the popup
 
 
-def popup():
+def add_main_window(monitor):
 	config.root = tk.Tk()
 	config.root.title("water time")
+	config.root.geometry(f"{monitor.width}x{monitor.height}+{monitor.x}+{monitor.y}")
 
 	# configure grid so everything is laid out nicely in the window
 	config.root.grid_columnconfigure(0, weight=1)  # fill entire window
@@ -90,9 +93,52 @@ def popup():
 				config.root.after(0, enable_button)
 		except RuntimeError:
 			print("window closed")
-
+	
 	global popup_timer_thread
 	popup_timer_thread = threading.Thread(target=timer, daemon=True)
 	popup_timer_thread.start()
+
+
+def add_secondary_window(monitor):
+	window = tk.Toplevel(config.root)
+	window.title("water time")
+	# put this window on the correct monitor at these virtual coordinates
+	window.geometry(f"{monitor.width}x{monitor.height}+{monitor.x}+{monitor.y}")
+
+	# make fullscreen and always on top
+	window.wm_attributes('-topmost', True)
+	# window.attributes('-fullscreen', True)  # this won't work bc it'll move to the main monitor...
+	window.overrideredirect(True)  # fake fullscreen by removing decoration etc
+
+	# bg image
+	file = "./images/bg/" + str(random.randint(1, NUM_BG_IMAGES)) + ".jpg"  # pick a random image
+	img = Image.open(file)
+
+	# scale the image to cover the entire screen...
+	img_ratio = img.width / img.height
+	screen_ratio = monitor.width / monitor.height
+	if img_ratio > screen_ratio:
+		new_height = monitor.height
+		new_width = int(new_height * img_ratio)
+	else:
+		new_width = monitor.width
+		new_height = int(new_width / img_ratio)
+	img = img.resize((new_width, new_height))
+
+	# now attach to background label
+	image = ImageTk.PhotoImage(img)
+	image_label = tk.Label(window, image=image, bg=BG)
+	image_label.place(relwidth=1, relheight=1)  # make it fill the window
+	image_label.image = image  # keep a reference so it doesn't get garbage collected
+	
+
+def popup():
+	# add a window for each monitor
+	monitors = get_monitors()
+	for monitor in monitors:
+		if monitor.is_primary or len(monitors) == 1:
+			add_main_window(monitor)
+		else:
+			add_secondary_window(monitor)
 
 	config.root.mainloop()
