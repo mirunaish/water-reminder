@@ -56,9 +56,9 @@ def add_main_window(monitor):
 	# bg image
 	bg_img = Image.open("./images/waterbg2.jpg")
 	bg_img = scale_image(bg_img, monitor.width, monitor.height)  # scale the image to cover the entire screen...
-	bg_image = ImageTk.PhotoImage(bg_img)
-	canvas.create_image((0, 0), image=bg_image, anchor="nw")
-	canvas.bg_image = bg_image  # keep a reference so it doesn't get garbage collected
+	bg_img = ImageTk.PhotoImage(bg_img)
+	canvas.bg_img_gc = bg_img  # keep a reference so it doesn't get garbage collected
+	canvas.create_image((0, 0), image=bg_img, anchor="nw")
 
 	# title text
 	canvas.create_text(grid(1), text=random.choice(TITLES), fill=TEXT, font=("Arial", 52))
@@ -68,12 +68,12 @@ def add_main_window(monitor):
 
 	# cat image
 	file = "./images/cats/" + str(random.randint(1, NUM_CAT_IMAGES)) + ".png"  # pick a random image
-	img = Image.open(file)
-	img = img.resize((int(img.size[0] * 500 / img.size[1]), 500))  # force height
-	image = ImageTk.PhotoImage(img)
-	canvas.create_image(grid(3), image=image, anchor="n")
-	canvas.cat_image = image  # keep a reference so it doesn't get garbage collected
-
+	cat_img = Image.open(file)
+	cat_img = cat_img.resize((int(cat_img.size[0] * 500 / cat_img.size[1]), 500))  # force height
+	cat_img = ImageTk.PhotoImage(cat_img)
+	canvas.cat_img_gc = cat_img  # keep a reference so it doesn't get garbage collected
+	canvas.create_image(grid(3), image=cat_img, anchor="n")
+	
 	# button to close the thing. it starts out disabled
 	close_button = tk.Button(config.root, text="", font=("Arial", 24), width=10, height=1, bg=PRIMARY_DARK, fg=PRIMARY_TEXT_DARK, state="disabled", bd=0, relief="flat", command=close_window)
 	button_pos = grid(9)
@@ -129,12 +129,16 @@ def add_secondary_window(monitor):
 	
 
 def popup():
-	# add a window for each monitor
 	monitors = get_monitors()
+
+	# first, find the first primary monitor and create the main window
+	primary_monitor = [m for m in monitors if m.is_primary][0]
+	add_main_window(primary_monitor)
+	
+	monitors.remove(primary_monitor)  # remove the primary monitor from the monitors list...
+	
+	# then add secondary windows for all other monitors
 	for monitor in monitors:
-		if monitor.is_primary or len(monitors) == 1:
-			add_main_window(monitor)
-		else:
-			add_secondary_window(monitor)
+		add_secondary_window(monitor)
 
 	config.root.mainloop()
