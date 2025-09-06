@@ -1,6 +1,6 @@
 # Water reminder
 
-![screenshot](screenshot.png)
+![screenshot](screenshot_new.png)
 
 Reminds you to drink water every 15, 30, or 60 minutes.
 
